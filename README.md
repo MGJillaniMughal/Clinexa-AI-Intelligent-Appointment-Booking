@@ -6,8 +6,8 @@
 
 Built with **LangGraph · OpenAI GPT-4o-mini · Streamlit · SQLite**
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-1C3C3C?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-1.3+-1C3C3C?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai&logoColor=white)](https://platform.openai.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![SQLite](https://img.shields.io/badge/SQLite-DB-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -123,7 +123,7 @@ Interrupt-and-resume handling, deterministic fast-paths, retries on model failur
 
 ## ⚙️ Quick Start
 
-> Requires Python 3.10+ and an OpenAI API key.
+> Requires Python 3.13+ and an OpenAI API key.
 
 ```bash
 # 1. clone
@@ -145,7 +145,7 @@ cp .env.example .env            # then put OPENAI_API_KEY=sk-... inside
 streamlit run app.py
 ```
 
-The SQLite database is **created, seeded and upgraded automatically** on first run — no manual step. The app opens at `http://localhost:8501`.
+The SQLite database is **created, seeded, and upgraded automatically** on first run — no manual step. The app opens at `http://localhost:8501`.
 
 ### Run the standalone showcase UI
 `index.html` is a fully self-contained interface for demos and screenshots — no server required.
@@ -188,7 +188,7 @@ clinexa-ai/
 
 ## 🗄️ Database
 
-The `doctors` table carries a full professional profile, generated deterministically from each doctor’s id (so the data is realistic, reproducible, and trivial to expand).
+The `doctors` table carries a full professional profile, generated deterministically from each doctor’s ID (so the data is realistic, reproducible, and trivial to expand).
 
 ```sql
 -- 60 doctors pre-seeded across 9 specialities
@@ -223,7 +223,7 @@ bookings (
 
 | Layer | Technology |
 |---|---|
-| Agent orchestration | LangGraph 0.2+ |
+| Agent orchestration | LangGraph 1.3+ |
 | LLM | OpenAI GPT-4o-mini |
 | App UI | Streamlit |
 | Showcase UI | HTML + Bootstrap 5 + vanilla JS |
