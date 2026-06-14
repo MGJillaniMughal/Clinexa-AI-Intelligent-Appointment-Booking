@@ -6,7 +6,7 @@
 
 Built with **LangGraph · OpenAI GPT-4o-mini · Streamlit · SQLite**
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-1C3C3C?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai&logoColor=white)](https://platform.openai.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -34,15 +34,15 @@ It guides a patient through the full journey — greeting, choosing a speciality
 |  |  |
 |---|---|
 | **Agentic welcome + live pipeline** | **Speciality selection** |
-| ![Greeting](assets/01-greeting.png) | ![Specialities](assets/02-specialities.png) |
+| ![Greeting](01-greeting.png) | ![Specialities](02-specialities.png) |
 | **Matched specialist profile** | **Date-aware time slots** |
-| ![Doctor profile](assets/03-doctor-profile.png) | ![Slots](assets/04-slots.png) |
+| ![Doctor profile](03-doctor-profile.png) | ![Slots](04-slots.png) |
 
 <div align="center">
 
 **Confirmed appointment with booking ID**
 
-<img src="assets/05-confirmation.png" width="720" alt="Confirmation" />
+<img src="05-confirmation.png" width="720" alt="Confirmation" />
 
 </div>
 
