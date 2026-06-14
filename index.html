@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clinexa AI · Intelligent Appointment Booking</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    --bg:#0c1014; --bg-2:#0e131a; --panel:#121822; --panel-2:#161d29;
+    --raise:#1b2330; --border:#222b3a; --border-soft:#1a212d;
+    --text:#e8eef6; --muted:#8a97aa; --faint:#59657a;
+    --brand:#10a37f; --brand-2:#16d6a4; --brand-ink:#0a2b24;
+    --blue:#3b82f6; --cyan:#22d3ee; --violet:#8b5cf6;
+    --danger:#f87171; --warn:#f5c451; --ok:#10a37f;
+    --r-sm:8px; --r:12px; --r-lg:18px;
+    --shadow:0 18px 40px -20px rgba(0,0,0,.7);
+    --sidebar-w:288px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif; font-size:14px; line-height:1.55;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  ::selection{background:rgba(22,214,164,.28)}
+  a{color:var(--brand-2);text-decoration:none}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .display{font-family:'Space Grotesk',sans-serif}
+
+  /* ambient backdrop */
+  .bg-fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .bg-fx::before{content:"";position:absolute;top:-18%;right:-8%;width:55vw;height:55vw;
+    background:radial-gradient(circle at center,rgba(16,163,127,.16),transparent 60%);filter:blur(8px)}
+  .bg-fx::after{content:"";position:absolute;bottom:-24%;left:-10%;width:50vw;height:50vw;
+    background:radial-gradient(circle at center,rgba(59,130,246,.10),transparent 60%)}
+
+  .shell{position:relative;z-index:1;display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:100vh}
+
+  /* ───────── Sidebar ───────── */
+  .sidebar{
+    background:linear-gradient(180deg,#0b0f15,#0c1119);
+    border-right:1px solid var(--border-soft);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .sb-brand{display:flex;align-items:center;gap:11px;padding:18px 18px 16px;border-bottom:1px solid var(--border-soft)}
+  .brand-mark{
+    width:38px;height:38px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--brand),#0e8f8a);color:#fff;font-size:19px;
+    box-shadow:0 6px 18px -6px rgba(16,163,127,.7), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .brand-name{font-family:'Space Grotesk';font-weight:700;font-size:16px;letter-spacing:.2px;line-height:1.1}
+  .brand-by{font-size:10.5px;color:var(--faint);letter-spacing:.3px;margin-top:1px}
+  .brand-by b{color:var(--muted);font-weight:600}
+
+  .sb-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px 14px 18px}
+  .sb-scroll::-webkit-scrollbar{width:8px}
+  .sb-scroll::-webkit-scrollbar-thumb{background:#1f2734;border-radius:8px}
+
+  .btn-new{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:linear-gradient(135deg,var(--brand),#0fae93);color:#04130f;font-weight:600;
+    border:0;border-radius:var(--r);padding:11px;font-size:13.5px;letter-spacing:.2px;cursor:pointer;
+    box-shadow:0 8px 22px -10px rgba(16,163,127,.85);transition:transform .12s ease,filter .12s ease;
+  }
+  .btn-new:hover{filter:brightness(1.06);transform:translateY(-1px)}
+  .btn-new:active{transform:translateY(0)}
+
+  .sb-label{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;color:var(--faint);
+    font-weight:600;margin:20px 4px 9px;display:flex;align-items:center;gap:7px}
+  .sb-label .ln{flex:1;height:1px;background:var(--border-soft)}
+
+  /* pipeline stepper */
+  .pipe{position:relative;padding-left:6px}
+  .pstep{display:flex;align-items:center;gap:11px;padding:6px 4px;position:relative}
+  .pstep .node{
+    width:24px;height:24px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+    background:var(--panel);border:1.5px solid var(--border);color:var(--faint);font-size:11px;
+    z-index:1;transition:.25s;
+  }
+  .pstep::before{content:"";position:absolute;left:17px;top:-10px;width:1.5px;height:16px;background:var(--border)}
+  .pstep:first-child::before{display:none}
+  .pstep .ptext{font-size:12.5px;color:var(--faint);font-weight:500;transition:.25s}
+  .pstep .ptag{margin-left:auto;font-size:9px;color:var(--faint);font-family:'JetBrains Mono'}
+  .pstep.done .node{background:rgba(16,163,127,.16);border-color:var(--brand);color:var(--brand-2)}
+  .pstep.done::before{background:var(--brand)}
+  .pstep.done .ptext{color:var(--muted)}
+  .pstep.active .node{background:var(--brand);border-color:var(--brand);color:#04130f;
+    box-shadow:0 0 0 4px rgba(16,163,127,.18)}
+  .pstep.active .ptext{color:var(--text);font-weight:600}
+  .pstep.active .ptag{color:var(--brand-2)}
+
+  /* booking summary card */
+  .bk-card{background:var(--panel);border:1px solid var(--border-soft);border-radius:var(--r);padding:4px 0;overflow:hidden}
+  .bk-row{display:flex;align-items:center;gap:10px;padding:8px 13px;font-size:12.5px;border-top:1px solid var(--border-soft)}
+  .bk-row:first-child{border-top:0}
+  .bk-row i{color:var(--brand-2);font-size:13px;width:16px;text-align:center}
+  .bk-row .k{color:var(--faint);min-width:62px}
+  .bk-row .v{color:var(--text);font-weight:500;margin-left:auto;text-align:right}
+  .bk-id{margin-top:9px;display:flex;align-items:center;gap:8px;justify-content:center;
+    background:rgba(16,163,127,.1);border:1px solid rgba(16,163,127,.35);border-radius:var(--r);
+    padding:8px;color:var(--brand-2);font-size:12px;font-weight:600}
+  .bk-id .mono{color:#bff5e6}
+
+  /* doctor availability */
+  .doc-row{display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:9px;transition:.15s}
+  .doc-row:hover{background:var(--panel)}
+  .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .dot.on{background:var(--brand);box-shadow:0 0 0 3px rgba(16,163,127,.18)}
+  .dot.off{background:#465062}
+  .doc-row .dn{font-size:12px;font-weight:600;color:#cdd6e2;line-height:1.15}
+  .doc-row .ds{font-size:10px;color:var(--faint)}
+  .doc-row .dstat{margin-left:auto;font-size:9.5px;font-weight:600}
+  .doc-row .dstat.on{color:var(--brand-2)}
+  .doc-row .dstat.off{color:var(--faint)}
+
+  .sb-foot{padding:14px 18px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--faint);display:flex;gap:14px}
+  .sb-foot a{color:var(--faint)}
+  .sb-foot a:hover{color:var(--brand-2)}
+
+  /* ───────── Main ───────── */
+  .main{display:flex;flex-direction:column;min-height:0;background:var(--bg-2)}
+  .topbar{
+    display:flex;align-items:center;gap:14px;padding:14px 26px;
+    border-bottom:1px solid var(--border-soft);background:rgba(12,16,20,.6);backdrop-filter:blur(10px);
+  }
+  .topbar .tt{font-family:'Space Grotesk';font-weight:600;font-size:15.5px}
+  .topbar .ts{font-size:12px;color:var(--faint);font-weight:400}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+    padding:4px 10px;border-radius:30px;border:1px solid var(--border);color:var(--muted);background:var(--panel)}
+  .pill i{font-size:11px}
+  .pill.live{color:var(--brand-2);border-color:rgba(16,163,127,.4);background:rgba(16,163,127,.08)}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--brand);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,163,127,.5)}50%{box-shadow:0 0 0 5px rgba(16,163,127,0)}}
+  .stage-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;
+    padding:6px 13px;border-radius:30px;background:rgba(16,163,127,.1);border:1px solid rgba(16,163,127,.34);color:var(--brand-2)}
+
+  .hamb{display:none;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    width:36px;height:36px;border-radius:9px;cursor:pointer}
+
+  /* chat */
+  .chat{flex:1;min-height:0;overflow-y:auto;padding:30px 0 18px}
+  .chat::-webkit-scrollbar{width:9px}
+  .chat::-webkit-scrollbar-thumb{background:#1c2430;border-radius:9px}
+  .thread{max-width:780px;margin:0 auto;padding:0 26px;display:flex;flex-direction:column;gap:20px}
+
+  .msg{display:flex;gap:13px;align-items:flex-start;animation:rise .4s cubic-bezier(.2,.7,.3,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .msg .av{width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;font-size:15px;margin-top:1px}
+  .av.bot{background:linear-gradient(150deg,var(--brand),#0d8f8a);color:#fff;
+    box-shadow:0 5px 14px -6px rgba(16,163,127,.8),inset 0 1px 0 rgba(255,255,255,.25)}
+  .av.usr{background:linear-gradient(150deg,#2b3647,#212a38);color:#aeb9c8;border:1px solid var(--border)}
+  .bubble{padding:13px 16px;border-radius:14px;font-size:14px;max-width:600px}
+  .msg.bot .bubble{background:var(--panel);border:1px solid var(--border-soft);border-top-left-radius:5px}
+  .msg.usr{flex-direction:row-reverse}
+  .msg.usr .bubble{background:linear-gradient(135deg,rgba(16,163,127,.16),rgba(16,163,127,.09));
+    border:1px solid rgba(16,163,127,.28);border-top-right-radius:5px;color:#e9fbf4}
+  .bubble p{margin:0 0 8px}.bubble p:last-child{margin-bottom:0}
+  .bubble b,.bubble strong{color:#fff;font-weight:600}
+  .who{font-size:11px;color:var(--faint);margin-bottom:5px;font-weight:600;letter-spacing:.2px}
+  .msg.usr .who{text-align:right}
+
+  /* option chips */
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .opts.done .chip{pointer-events:none;opacity:.45;filter:grayscale(.3)}
+  .opts.done .chip.primary{opacity:.55}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--border);
+    color:var(--text);border-radius:30px;padding:8px 15px;font-size:13px;font-weight:500;cursor:pointer;
+    transition:.15s;font-family:inherit}
+  .chip:hover{border-color:var(--brand);background:rgba(16,163,127,.1);color:var(--brand-2);transform:translateY(-1px)}
+  .chip:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+  .chip i{font-size:13px;color:var(--brand-2)}
+  .chip.primary{background:linear-gradient(135deg,var(--brand),#0fae93);border-color:transparent;color:#04130f;font-weight:600}
+  .chip.primary i{color:#04130f}
+  .chip.ghost i{color:var(--muted)}
+  .chip.danger:hover{border-color:var(--danger);background:rgba(248,113,113,.1);color:#fca5a5}
+  .chip.danger:hover i{color:#fca5a5}
+
+  /* doctor card in chat */
+  .dr-card{margin-top:12px;background:var(--panel);border:1px solid var(--border-soft);border-radius:16px;
+    padding:15px 16px;max-width:470px}
+  .dr-top{display:flex;align-items:center;gap:13px}
+  .dr-av{width:48px;height:48px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;
+    font-family:'Space Grotesk';font-weight:600;font-size:16px;color:#04130f;
+    background:linear-gradient(150deg,var(--brand-2),#0fae93)}
+  .dr-name{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:7px}
+  .dr-spec{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dr-rating{flex:0 0 auto;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--warn);
+    background:rgba(245,196,81,.1);border:1px solid rgba(245,196,81,.3);border-radius:9px;padding:5px 9px}
+  .dr-rating .ic{color:var(--warn);fill:var(--warn)}
+  .dr-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:13px;
+    background:var(--border-soft);border:1px solid var(--border-soft);border-radius:11px;overflow:hidden}
+  .dg{display:flex;align-items:center;gap:9px;padding:9px 12px;background:var(--panel);font-size:12.5px}
+  .dg .ic{color:var(--brand-2);font-size:14px;flex:0 0 auto}
+  .dg span{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+  .dg i{font-style:normal;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  .dg span{color:#dbe3ee;font-weight:500}
+  .dg .av-tag{color:var(--brand-2);font-weight:600}
+  .verify{color:var(--brand-2)}
+
+  /* summary / confirmation cards */
+  .sum{margin-top:12px;background:var(--panel);border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;max-width:430px}
+  .sum-h{padding:11px 16px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border-soft);
+    display:flex;align-items:center;gap:8px;color:#fff;background:var(--panel-2)}
+  .sum-r{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;border-top:1px solid var(--border-soft)}
+  .sum-r:first-of-type{border-top:0}
+  .sum-r i{color:var(--brand-2);width:16px;text-align:center}
+  .sum-r .k{color:var(--muted)}.sum-r .v{margin-left:auto;font-weight:600;color:#fff}
+
+  .conf{margin-top:12px;background:linear-gradient(180deg,rgba(16,163,127,.12),var(--panel));
+    border:1px solid rgba(16,163,127,.4);border-radius:16px;padding:22px;max-width:440px;text-align:center}
+  .conf-check{width:58px;height:58px;border-radius:50%;margin:0 auto 13px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--brand),#0fae93);color:#04130f;font-size:30px;
+    box-shadow:0 12px 28px -10px rgba(16,163,127,.9),inset 0 1px 0 rgba(255,255,255,.3);
+    animation:pop .45s cubic-bezier(.2,1.5,.4,1)}
+  .conf-check .ic{stroke-width:3}
+  @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+  .conf h4{font-family:'Space Grotesk';font-weight:700;font-size:18px;margin:0 0 4px}
+  .conf .sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .conf .idbox{background:rgba(0,0,0,.3);border:1px dashed rgba(16,163,127,.5);border-radius:10px;
+    padding:10px;margin-bottom:14px}
+  .conf .idbox .l{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--faint)}
+  .conf .idbox .id{font-family:'JetBrains Mono';font-weight:600;font-size:17px;color:var(--brand-2);letter-spacing:1px}
+  .conf-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;margin-bottom:16px}
+  .conf-grid .cell{background:rgba(0,0,0,.22);border-radius:9px;padding:9px 11px}
+  .conf-grid .cl{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.6px}
+  .conf-grid .cv{font-size:13px;font-weight:600;color:#fff;margin-top:2px}
+  .conf-btns{display:flex;gap:8px;justify-content:center}
+
+  /* typing */
+  .typing .bubble{display:flex;flex-direction:column;gap:7px}
+  .dots{display:flex;gap:5px;align-items:center;height:8px}
+  .dots span{width:7px;height:7px;border-radius:50%;background:var(--brand-2);opacity:.4;animation:blink 1.2s infinite}
+  .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.35;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+  .trace{font-family:'JetBrains Mono';font-size:10px;color:var(--faint);display:flex;align-items:center;gap:6px}
+  .trace .tdot{width:6px;height:6px;border-radius:50%;background:var(--brand);animation:pulse 1.4s infinite}
+
+  /* composer */
+  .composer{padding:14px 26px 20px;border-top:1px solid var(--border-soft);background:rgba(12,16,20,.5);backdrop-filter:blur(8px)}
+  .composer-in{max-width:780px;margin:0 auto}
+  .sugg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .sugg button{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:30px;
+    padding:6px 13px;font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}
+  .sugg button:hover{border-color:var(--brand);color:var(--brand-2)}
+  .inbar{display:flex;align-items:flex-end;gap:10px;background:var(--panel);border:1px solid var(--border);
+    border-radius:16px;padding:8px 8px 8px 16px;transition:border-color .15s}
+  .inbar:focus-within{border-color:var(--brand)}
+  .inbar textarea{flex:1;background:transparent;border:0;outline:0;resize:none;color:var(--text);
+    font-family:inherit;font-size:14px;line-height:1.5;max-height:120px;padding:6px 0}
+  .inbar textarea::placeholder{color:var(--faint)}
+  .send{width:38px;height:38px;border-radius:11px;border:0;cursor:pointer;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--brand),#0fae93);color:#04130f;font-size:16px;
+    display:grid;place-items:center;transition:.15s}
+  .send:hover{filter:brightness(1.08)}
+  .send:disabled{opacity:.4;cursor:not-allowed}
+  .foothint{text-align:center;font-size:10.5px;color:var(--faint);margin-top:9px}
+  .foothint .mono{color:var(--muted)}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);z-index:50;
+    background:var(--raise);border:1px solid var(--border);border-radius:12px;padding:11px 16px;
+    font-size:13px;color:var(--text);box-shadow:var(--shadow);opacity:0;transition:.3s;display:flex;align-items:center;gap:9px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast i{color:var(--brand-2)}
+
+  /* responsive */
+  .backdrop{display:none}
+  @media(max-width:900px){
+    .shell{grid-template-columns:1fr}
+    .sidebar{position:fixed;z-index:40;width:var(--sidebar-w);height:100vh;transform:translateX(-100%);transition:transform .25s}
+    .sidebar.open{transform:none;box-shadow:30px 0 60px -20px rgba(0,0,0,.8)}
+    .hamb{display:grid;place-items:center}
+    .backdrop.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:35}
+    .topbar{padding:12px 16px}.thread,.composer-in{padding-left:16px;padding-right:16px}
+    .hide-sm{display:none}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  :focus-visible{outline:2px solid var(--brand-2);outline-offset:2px}
+
+  .ic{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;fill:none;stroke:currentColor;
+      stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+  .d-flex{display:flex}.align-items-center{align-items:center}.gap-2{gap:8px}
+  .ms-auto{margin-left:auto}.ms-2{margin-left:8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol><symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M8 12h8" /> <path d="M12 8v8" /></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /> <path d="M2 12h20" /></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 5h16" /> <path d="M4 12h16" /> <path d="M4 19h16" /></symbol><symbol id="i-workflow" viewBox="0 0 24 24"><rect width="8" height="8" x="3" y="3" rx="2" /> <path d="M7 11v4a2 2 0 0 0 2 2h4" /> <rect width="8" height="8" x="13" y="13" rx="2" /></symbol><symbol id="i-cpu" viewBox="0 0 24 24"><path d="M12 20v2" /> <path d="M12 2v2" /> <path d="M17 20v2" /> <path d="M17 2v2" /> <path d="M2 12h2" /> <path d="M2 17h2" /> <path d="M2 7h2" /> <path d="M20 12h2" /> <path d="M20 17h2" /> <path d="M20 7h2" /> <path d="M7 20v2" /> <path d="M7 2v2" /> <rect x="4" y="4" width="16" height="16" rx="2" /> <rect x="8" y="8" width="8" height="8" rx="1" /></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /> <path d="M20 2v4" /> <path d="M22 4h-4" /> <circle cx="4" cy="20" r="2" /></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol><symbol id="i-check-circle" viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335" /> <path d="m9 11 3 3L22 4" /></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M11 2v2" /> <path d="M5 2v2" /> <path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1" /> <path d="M8 15a6 6 0 0 0 12 0v-3" /> <circle cx="20" cy="10" r="2" /></symbol><symbol id="i-user-round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5" /> <path d="M20 21a8 8 0 0 0-16 0" /></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M12 6v6l4 2" /></symbol><symbol id="i-list-checks" viewBox="0 0 24 24"><path d="M13 5h8" /> <path d="M13 12h8" /> <path d="M13 19h8" /> <path d="m3 17 2 2 4-4" /> <path d="m3 7 2 2 4-4" /></symbol><symbol id="i-square-pen" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /> <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /></symbol><symbol id="i-calendar-plus" viewBox="0 0 24 24"><path d="M16 19h6" /> <path d="M16 2v4" /> <path d="M19 16v6" /> <path d="M21 12.598V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8.5" /> <path d="M3 10h18" /> <path d="M8 2v4" /></symbol><symbol id="i-calendar-days" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /> <path d="M8 14h.01" /> <path d="M12 14h.01" /> <path d="M16 14h.01" /> <path d="M8 18h.01" /> <path d="M12 18h.01" /> <path d="M16 18h.01" /></symbol><symbol id="i-calendar-range" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M16 2v4" /> <path d="M3 10h18" /> <path d="M8 2v4" /> <path d="M17 14h-6" /> <path d="M13 18H7" /> <path d="M7 14h.01" /> <path d="M17 18h.01" /></symbol><symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></symbol><symbol id="i-rotate-cw" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /></symbol><symbol id="i-badge-check" viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" /> <path d="m9 12 2 2 4-4" /></symbol><symbol id="i-heart-pulse" viewBox="0 0 24 24"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /> <path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" /></symbol><symbol id="i-brain" viewBox="0 0 24 24"><path d="M12 18V5" /> <path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" /> <path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" /> <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77" /> <path d="M18 18a4 4 0 0 0 2-7.464" /> <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" /> <path d="M6 18a4 4 0 0 1-2-7.464" /> <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77" /></symbol><symbol id="i-brain-circuit" viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" /> <path d="M9 13a4.5 4.5 0 0 0 3-4" /> <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5" /> <path d="M3.477 10.896a4 4 0 0 1 .585-.396" /> <path d="M6 18a4 4 0 0 1-1.967-.516" /> <path d="M12 13h4" /> <path d="M12 18h6a2 2 0 0 1 2 2v1" /> <path d="M12 8h8" /> <path d="M16 8V5a2 2 0 0 1 2-2" /> <circle cx="16" cy="13" r=".5" /> <circle cx="18" cy="3" r=".5" /> <circle cx="20" cy="21" r=".5" /> <circle cx="20" cy="8" r=".5" /></symbol><symbol id="i-bone" viewBox="0 0 24 24"><path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z" /></symbol><symbol id="i-baby" viewBox="0 0 24 24"><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" /> <path d="M15 12h.01" /> <path d="M19.38 6.813A9 9 0 0 1 20.8 10.2a2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1" /> <path d="M9 12h.01" /></symbol><symbol id="i-scan-face" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2" /> <path d="M17 3h2a2 2 0 0 1 2 2v2" /> <path d="M21 17v2a2 2 0 0 1-2 2h-2" /> <path d="M7 21H5a2 2 0 0 1-2-2v-2" /> <path d="M8 14s1.5 2 4 2 4-2 4-2" /> <path d="M9 9h.01" /> <path d="M15 9h.01" /></symbol><symbol id="i-venus" viewBox="0 0 24 24"><path d="M12 15v7" /> <path d="M9 19h6" /> <circle cx="12" cy="9" r="6" /></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M8 14s1.5 2 4 2 4-2 4-2" /> <line x1="9" x2="9.01" y1="9" y2="9" /> <line x1="15" x2="15.01" y1="9" y2="9" /></symbol><symbol id="i-ear" viewBox="0 0 24 24"><path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0" /> <path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4" /></symbol><symbol id="i-star" viewBox="0 0 24 24"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></symbol><symbol id="i-briefcase" viewBox="0 0 24 24"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /> <rect width="20" height="14" x="2" y="6" rx="2" /></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2" /> <circle cx="12" cy="12" r="2" /> <path d="M6 12h.01M18 12h.01" /></symbol><symbol id="i-graduation-cap" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" /> <path d="M22 10v6" /> <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /></symbol><symbol id="i-languages" viewBox="0 0 24 24"><path d="m5 8 6 6" /> <path d="m4 14 6-6 2-3" /> <path d="M2 5h12" /> <path d="M7 2h1" /> <path d="m22 22-5-10-5 10" /> <path d="M14 18h6" /></symbol><symbol id="i-linkedin" viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></symbol><symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/></symbol></svg>
+<div class="bg-fx"></div>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ───────── SIDEBAR ───────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="brand-mark"><svg class="ic"><use href="#i-plus"></use></svg></div>
+      <div>
+        <div class="brand-name">Clinexa AI</div>
+        <div class="brand-by">by <b>JillaniSofTech</b></div>
+      </div>
+    </div>
+
+    <div class="sb-scroll">
+      <button class="btn-new" id="newBooking"><svg class="ic"><use href="#i-plus-circle"></use></svg> New booking</button>
+
+      <div class="sb-label">Agent pipeline <span class="ln"></span></div>
+      <div class="pipe" id="pipe"></div>
+
+      <div id="summaryWrap" style="display:none">
+        <div class="sb-label">Current booking <span class="ln"></span></div>
+        <div class="bk-card" id="summary"></div>
+        <div class="bk-id" id="bkId" style="display:none"></div>
+      </div>
+
+      <div class="sb-label">Doctors on shift today <span class="ln"></span></div>
+      <div id="docList"></div>
+    </div>
+
+    <div class="sb-foot">
+      <a href="https://jillanisoftech.com/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-globe"></use></svg> jillanisoftech.com</a>
+      <a href="https://www.linkedin.com/in/jillanisofttech/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-linkedin"></use></svg> LinkedIn</a>
+    </div>
+  </aside>
+
+  <!-- ───────── MAIN ───────── -->
+  <main class="main">
+    <div class="topbar">
+      <button class="hamb" id="hamb"><svg class="ic"><use href="#i-menu"></use></svg></button>
+      <div>
+        <div class="tt">Clinexa AI <span class="ts">· Appointment Booking</span></div>
+      </div>
+      <div class="ms-auto d-flex align-items-center gap-2 hide-sm">
+        <span class="pill live"><span class="live-dot"></span> Agent online</span>
+        <span class="pill"><svg class="ic"><use href="#i-workflow"></use></svg> LangGraph</span>
+        <span class="pill"><svg class="ic"><use href="#i-cpu"></use></svg> GPT-4o-mini</span>
+      </div>
+      <div class="ms-2"><span class="stage-badge" id="stageBadge"><svg class="ic"><use href="#i-sparkles"></use></svg> Welcome</span></div>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="thread" id="thread"></div>
+    </div>
+
+    <div class="composer">
+      <div class="composer-in">
+        <div class="sugg" id="sugg"></div>
+        <div class="inbar">
+          <textarea id="input" rows="1" placeholder="Message Clinexa AI…"></textarea>
+          <button class="send" id="send"><svg class="ic"><use href="#i-arrow-up"></use></svg></button>
+        </div>
+        <div class="foothint">Clinexa AI can make mistakes. Confirm appointment details before your visit. <span class="mono">v1.0 · JillaniSofTech</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"><svg class="ic"><use href="#i-check-circle"></use></svg> <span></span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ════════════════ Clinexa AI · client agent ════════════════
+   Mirrors the LangGraph state machine:
+   greeting → select_speciality → select_doctor → select_date →
+   select_slot → confirm → collect_details → completed / cancelled
+   ============================================================ */
+
+// ── Real roster (mirrors data/db.py) · 60 doctors · 9 specialities ──
+const SPECIALITIES = [
+  {name:"General Physician", icon:"stethoscope", fee:40, qual:"MBBS, MD (Medicine)"},
+  {name:"Dermatologist", icon:"scan-face", fee:60, qual:"MBBS, FCPS (Dermatology)"},
+  {name:"Orthopedic", icon:"bone", fee:70, qual:"MBBS, FCPS (Orthopedics)"},
+  {name:"Pediatrician", icon:"baby", fee:50, qual:"MBBS, FCPS (Pediatrics)"},
+  {name:"ENT Specialist", icon:"ear", fee:55, qual:"MBBS, FCPS (ENT)"},
+  {name:"Cardiologist", icon:"heart-pulse", fee:90, qual:"MBBS, FCPS (Cardiology)"},
+  {name:"Neurologist", icon:"brain", fee:85, qual:"MBBS, FCPS (Neurology)"},
+  {name:"Gynecologist", icon:"venus", fee:65, qual:"MBBS, FCPS (Gynaecology)"},
+  {name:"Psychiatrist", icon:"brain-circuit", fee:75, qual:"MBBS, FCPS (Psychiatry)"},
+];
+const SEED = [
+  ["D1","Dr. John Smith","General Physician","10:00-14:00"],
+  ["D8","Dr. Daniel Taylor","General Physician","09:00-13:00"],
+  ["D16","Dr. Joshua Clark","General Physician","08:00-12:00"],
+  ["D24","Dr. Henry Scott","General Physician","12:00-16:00"],
+  ["D32","Dr. Wyatt Roberts","General Physician","09:00-13:00"],
+  ["D40","Dr. Caleb Stewart","General Physician","12:00-17:00"],
+  ["D46","Dr. Lucas Bennett","General Physician","09:00-13:00"],
+  ["D54","Dr. Jack Long","General Physician","12:00-16:00"],
+  ["D2","Dr. Emily Johnson","Dermatologist","11:00-16:00"],
+  ["D11","Dr. Isabella Martin","Dermatologist","10:00-14:00"],
+  ["D19","Dr. Amelia Hall","Dermatologist","12:00-16:00"],
+  ["D27","Dr. Ella Baker","Dermatologist","11:00-15:00"],
+  ["D35","Dr. Lily Campbell","Dermatologist","08:00-12:00"],
+  ["D43","Dr. Victoria Rogers","Dermatologist","11:00-15:00"],
+  ["D47","Dr. Aria Foster","Dermatologist","10:00-14:00"],
+  ["D3","Dr. Michael Brown","Orthopedic","09:00-13:00"],
+  ["D10","Dr. Matthew Jackson","Orthopedic","13:00-18:00"],
+  ["D18","Dr. Benjamin Walker","Orthopedic","09:00-13:00"],
+  ["D26","Dr. Sebastian Adams","Orthopedic","08:00-12:00"],
+  ["D34","Dr. Julian Phillips","Orthopedic","10:00-14:00"],
+  ["D42","Dr. Isaac Morris","Orthopedic","08:00-12:00"],
+  ["D48","Dr. Mason Gray","Orthopedic","12:00-16:00"],
+  ["D4","Dr. Sarah Davis","Pediatrician","10:00-15:00"],
+  ["D13","Dr. Ava Perez","Pediatrician","09:00-13:00"],
+  ["D21","Dr. Harper Young","Pediatrician","10:00-15:00"],
+  ["D29","Dr. Scarlett Carter","Pediatrician","13:00-17:00"],
+  ["D37","Dr. Zoey Evans","Pediatrician","10:00-15:00"],
+  ["D45","Dr. Penelope Cook","Pediatrician","13:00-17:00"],
+  ["D49","Dr. Ella Simmons","Pediatrician","08:00-12:00"],
+  ["D5","Dr. David Wilson","ENT Specialist","12:00-17:00"],
+  ["D14","Dr. Andrew White","ENT Specialist","11:00-15:00"],
+  ["D22","Dr. Alexander King","ENT Specialist","11:00-16:00"],
+  ["D30","Dr. Leo Mitchell","ENT Specialist","10:00-14:00"],
+  ["D38","Dr. Aaron Edwards","ENT Specialist","11:00-16:00"],
+  ["D50","Dr. Logan Hughes","ENT Specialist","11:00-15:00"],
+  ["D6","Dr. James Anderson","Cardiologist","08:00-12:00"],
+  ["D12","Dr. Christopher Lee","Cardiologist","12:00-16:00"],
+  ["D20","Dr. Elijah Allen","Cardiologist","13:00-17:00"],
+  ["D28","Dr. Jack Nelson","Cardiologist","09:00-13:00"],
+  ["D36","Dr. Nathan Parker","Cardiologist","13:00-18:00"],
+  ["D44","Dr. Owen Reed","Cardiologist","09:00-13:00"],
+  ["D51","Dr. Avery Price","Cardiologist","13:00-17:00"],
+  ["D7","Dr. Olivia Thomas","Neurologist","10:00-14:00"],
+  ["D15","Dr. Mia Harris","Neurologist","14:00-18:00"],
+  ["D23","Dr. Evelyn Wright","Neurologist","09:00-13:00"],
+  ["D31","Dr. Grace Perez","Neurologist","12:00-16:00"],
+  ["D39","Dr. Hannah Collins","Neurologist","09:00-13:00"],
+  ["D52","Dr. Ethan Hayes","Neurologist","09:00-13:00"],
+  ["D9","Dr. Sophia Moore","Gynecologist","11:00-15:00"],
+  ["D17","Dr. Charlotte Lewis","Gynecologist","10:00-14:00"],
+  ["D25","Dr. Abigail Green","Gynecologist","10:00-14:00"],
+  ["D33","Dr. Chloe Turner","Gynecologist","11:00-15:00"],
+  ["D41","Dr. Nora Sanchez","Gynecologist","10:00-14:00"],
+  ["D53","Dr. Scarlett Myers","Gynecologist","10:00-14:00"],
+  ["D55","Dr. Ruth Bennett","Psychiatrist","10:00-14:00"],
+  ["D56","Dr. Omar Farooq","Psychiatrist","13:00-17:00"],
+  ["D57","Dr. Clara Nguyen","Psychiatrist","09:00-13:00"],
+  ["D58","Dr. Vincent Russo","Psychiatrist","11:00-15:00"],
+  ["D59","Dr. Maya Kapoor","Psychiatrist","12:00-16:00"],
+  ["D60","Dr. Daniel Cohen","Psychiatrist","14:00-18:00"],
+];
+
+// deterministic profile — identical math to db.py _enrich()
+function enrich(id, spec){
+  const meta = SPECIALITIES.find(s=>s.name===spec) || {fee:50,qual:"MBBS"};
+  let seed=0; for(const c of id) seed+=c.charCodeAt(0);
+  const exp=6+(seed%22), rating=(4.5+(seed%5)*0.1).toFixed(1), fee=meta.fee+(seed%4)*5;
+  const langs=["English","Urdu"];
+  if(seed%3===0)langs.push("Arabic"); if(seed%4===0)langs.push("French"); if(seed%5===0)langs.push("Mandarin");
+  const room=["A","B","C","D"][seed%4]+"-"+(200+(seed%80));
+  return {exp,rating,fee,qual:meta.qual,langs:[...new Set(langs)].join(", "),room,online:(seed%3!==0)};
+}
+const ICON_OF = Object.fromEntries(SPECIALITIES.map(s=>[s.name,s.icon]));
+const ROSTER = SEED.map(([id,name,spec,timing])=>({id,name,spec,timing,icon:ICON_OF[spec],...enrich(id,spec)}));
+
+const STAGES = [
+  {key:"greeting",          label:"Welcome",      icon:"sparkles", node:"greeting"},
+  {key:"select_speciality", label:"Speciality",   icon:"stethoscope",node:"select_speciality"},
+  {key:"select_doctor",     label:"Doctor",       icon:"user-round",   node:"select_doctor"},
+  {key:"select_date",       label:"Date",         icon:"calendar",      node:"select_date"},
+  {key:"select_slot",       label:"Time slot",    icon:"clock",          node:"select_slot"},
+  {key:"confirm",           label:"Review",       icon:"list-checks",     node:"confirm"},
+  {key:"collect_details",   label:"Your details", icon:"square-pen",  node:"collect_details"},
+  {key:"completed",         label:"Confirmed",    icon:"check-circle",  node:"completed"},
+];
+const STAGE_ORDER = STAGES.map(s=>s.key);
+
+// ── State ────────────────────────────────────────────────────
+let S = freshState();
+function freshState(){return{stage:"greeting",speciality:null,doctor:null,date:null,slot:null,name:null,phone:null,bookingId:null,subStage:null};}
+
+// ── DOM refs ─────────────────────────────────────────────────
+const thread=document.getElementById('thread'), chat=document.getElementById('chat');
+const input=document.getElementById('input'), sendBtn=document.getElementById('send');
+const stageBadge=document.getElementById('stageBadge'), sugg=document.getElementById('sugg');
+
+// ── Helpers ──────────────────────────────────────────────────
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const md=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+function fmtDate(d){return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}
+function isoDate(d){return d.toISOString().slice(0,10);}
+function genId(){let r='';for(let i=0;i<6;i++)r+="ABCDEFGHJKMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*30)];return"BKG-"+r;}
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function scrollDown(){requestAnimationFrame(()=>chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'}));}
+
+// ── Message rendering ────────────────────────────────────────
+function userMsg(text){
+  const el=document.createElement('div');el.className='msg usr';
+  el.innerHTML=`<div class="av usr"><svg class="ic"><use href="#i-user"></use></svg></div>
+    <div><div class="who">You</div><div class="bubble">${md(text)}</div></div>`;
+  thread.appendChild(el);scrollDown();
+}
+function botMsg(html,extra=''){
+  const el=document.createElement('div');el.className='msg bot';
+  el.innerHTML=`<div class="av bot"><svg class="ic"><use href="#i-plus"></use></svg></div>
+    <div style="flex:1"><div class="who">Clinexa AI</div><div class="bubble">${html}</div>${extra}</div>`;
+  thread.appendChild(el);scrollDown();
+  return el;
+}
+function showTyping(node){
+  const el=document.createElement('div');el.className='msg bot typing';el.id='typing';
+  el.innerHTML=`<div class="av bot"><svg class="ic"><use href="#i-plus"></use></svg></div>
+    <div><div class="who">Clinexa AI</div><div class="bubble">
+      <div class="trace"><span class="tdot"></span> llm_router → ${node} · gpt-4o-mini</div>
+      <div class="dots"><span></span><span></span><span></span></div>
+    </div></div>`;
+  thread.appendChild(el);scrollDown();
+}
+function hideTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+
+// agent says something after a realistic delay
+function agent(node,fn,delay=750){
+  setStage(node);
+  disableInput(true);
+  showTyping(node);
+  setTimeout(()=>{hideTyping();fn();disableInput(S.stage==='completed'||S.stage==='cancelled');},delay);
+}
+
+// ── Stage / sidebar sync ─────────────────────────────────────
+function setStage(stage){
+  S.stage=stage;
+  const cfg=STAGES.find(s=>s.key===stage) || {label:"Cancelled",icon:"x"};
+  stageBadge.innerHTML=`<svg class="ic"><use href="#i-${cfg.icon}"></use></svg> ${cfg.label}`;
+  renderPipe();renderSummary();
+}
+function renderPipe(){
+  const cur=STAGE_ORDER.indexOf(S.stage);
+  document.getElementById('pipe').innerHTML=STAGES.map((s,i)=>{
+    let cls='';if(S.stage==='cancelled'){cls=i===0?'done':'';}
+    else if(i<cur)cls='done';else if(i===cur)cls='active';
+    return `<div class="pstep ${cls}">
+      <div class="node">${cls==='done'?'<svg class="ic"><use href="#i-check"></use></svg>':`<svg class="ic"><use href="#i-${s.icon}"></use></svg>`}</div>
+      <div class="ptext">${s.label}</div><div class="ptag">${s.node}</div></div>`;
+  }).join('');
+}
+function renderSummary(){
+  const wrap=document.getElementById('summaryWrap'), box=document.getElementById('summary'), idb=document.getElementById('bkId');
+  const rows=[];
+  if(S.speciality)rows.push(['bi-clipboard2-pulse','Speciality',S.speciality]);
+  if(S.doctor)rows.push(['bi-person-badge','Doctor',S.doctor.name]);
+  if(S.date)rows.push(['bi-calendar3','Date',S.dateLabel]);
+  if(S.slot)rows.push(['bi-clock','Time',S.slot]);
+  if(S.name)rows.push(['bi-person','Patient',S.name]);
+  if(!rows.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  box.innerHTML=rows.map(r=>`<div class="bk-row"><svg class="ic"><use href="#i-${r[0]}"></use></svg><span class="k">${r[1]}</span><span class="v">${esc(r[2])}</span></div>`).join('');
+  if(S.bookingId){idb.style.display='flex';idb.innerHTML=`<svg class="ic"><use href="#i-check-circle"></use></svg> Booking <span class="mono">${S.bookingId}</span>`;}
+  else idb.style.display='none';
+}
+
+// ── Doctor availability sidebar ──────────────────────────────
+function renderDocs(){
+  // one representative doctor per speciality (9 rows)
+  const seen=new Set(),sample=[];
+  for(const d of ROSTER){ if(!seen.has(d.spec)){seen.add(d.spec);sample.push(d);} }
+  document.getElementById('docList').innerHTML=sample.map(d=>`
+    <div class="doc-row">
+      <span class="dot ${d.online?'on':'off'}"></span>
+      <div style="flex:1;min-width:0"><div class="dn">${d.name}</div><div class="ds">${d.spec} · ★ ${d.rating}</div></div>
+      <span class="dstat ${d.online?'on':'off'}">${d.online?'Available':'Busy'}</span>
+    </div>`).join('');
+}
+
+// ── Time slots (mirrors generate_time_slots) ─────────────────
+function genSlots(timing){
+  const [a,b]=timing.split('-');let sh=+a.split(':')[0],eh=+b.split(':')[0],out=[];
+  for(let h=sh;h<eh;h++){
+    if(h<12)out.push(`${h}:00 AM`);else if(h===12)out.push('12:00 PM');else out.push(`${h-12}:00 PM`);
+  }
+  return out;
+}
+
+// ── Option chip builder ──────────────────────────────────────
+function optionRow(opts){
+  const wrap=document.createElement('div');wrap.className='opts';
+  opts.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='chip'+(o.cls?(' '+o.cls):'');
+    b.innerHTML=(o.icon?`<svg class="ic"><use href="#i-${o.icon}"></use></svg>`:'')+esc(o.label);
+    if(o.disabled){b.disabled=true;}else{b.onclick=()=>o.run();}
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+function attachOpts(botEl,opts){
+  document.querySelectorAll('.opts').forEach(o=>o.classList.add('done'));
+  botEl.lastElementChild.appendChild(optionRow(opts));scrollDown();
+}
+
+// ════════════════ FLOW ════════════════
+function start(){
+  thread.innerHTML='';S=freshState();
+  setStage('greeting');renderSummary();setSugg([]);
+  agent('greeting',()=>{
+    const el=botMsg(`👋 <b>Welcome to Clinexa AI</b> by JillaniSofTech. I can book you an appointment with the right specialist in under a minute. Shall we begin?`);
+    attachOpts(el,[{label:'Book an appointment',icon:'calendar-plus',cls:'primary',run:goSpeciality}]);
+  },650);
+}
+
+function goSpeciality(){
+  userMsg("I'd like to book an appointment");
+  agent('select_speciality',()=>{
+    const el=botMsg(`Of course. Which <b>medical speciality</b> do you need? We have 60 specialists across 9 departments.`);
+    attachOpts(el,SPECIALITIES.map(s=>({label:s.name,icon:s.icon,run:()=>pickSpeciality(s.name)})));
+  });
+}
+
+function pickSpeciality(name){
+  userMsg(name);S.speciality=name;
+  agent('select_doctor',()=>{
+    const pool=ROSTER.filter(d=>d.spec===name);
+    const doc=rnd(pool);S.doctor=doc;
+    const initials=doc.name.replace('Dr. ','').split(' ').map(w=>w[0]).join('');
+    const card=`<div class="dr-card">
+      <div class="dr-top">
+        <div class="dr-av">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div class="dr-name">${doc.name} <svg class="ic verify" title="Verified specialist"><use href="#i-badge-check"></use></svg></div>
+          <div class="dr-spec"><svg class="ic"><use href="#i-${doc.icon}"></use></svg> ${doc.spec} · ${doc.qual}</div>
+        </div>
+        <div class="dr-rating"><svg class="ic"><use href="#i-star"></use></svg> ${doc.rating}</div>
+      </div>
+      <div class="dr-grid">
+        <div class="dg"><svg class="ic"><use href="#i-briefcase"></use></svg><span><i>Experience</i>${doc.exp} years</span></div>
+        <div class="dg"><svg class="ic"><use href="#i-banknote"></use></svg><span><i>Consultation</i>$${doc.fee}</span></div>
+        <div class="dg"><svg class="ic"><use href="#i-clock"></use></svg><span><i>Hours</i>${doc.timing}</span></div>
+        <div class="dg"><svg class="ic"><use href="#i-map-pin"></use></svg><span><i>Room</i>${doc.room}</span></div>
+        <div class="dg"><svg class="ic"><use href="#i-languages"></use></svg><span><i>Languages</i>${doc.langs}</span></div>
+        <div class="dg"><svg class="ic"><use href="#i-calendar-days"></use></svg><span><i>Status</i><b class="av-tag">Available today</b></span></div>
+      </div></div>`;
+    const el=botMsg(`Great choice. I've matched you with an available <b>${name}</b> specialist:`,card);
+    goDate(el);
+  });
+}
+
+function goDate(){
+  agent('select_date',()=>{
+    const today=new Date(),tom=new Date(Date.now()+864e5);
+    S._today=today;S._tom=tom;
+    const el=botMsg(`When would you like to see <b>${S.doctor.name}</b>?`);
+    attachOpts(el,[
+      {label:`Today · ${fmtDate(today)}`,icon:'calendar-days',run:()=>pickDate(today,'Today')},
+      {label:`Tomorrow · ${fmtDate(tom)}`,icon:'calendar-range',run:()=>pickDate(tom,'Tomorrow')},
+    ]);
+  });
+}
+
+function pickDate(d,word){
+  userMsg(word);S.date=isoDate(d);S.dateLabel=`${word} · ${fmtDate(d)}`;
+  agent('select_slot',()=>{
+    const slots=genSlots(S.doctor.timing);
+    // deterministically mark ~2 slots as already booked → date-aware feel
+    const booked=new Set([slots[1],slots[slots.length-2]]);
+    const el=botMsg(`Here are <b>${S.doctor.name}</b>'s open slots for <b>${word.toLowerCase()}</b>. Booked times are greyed out.`);
+    attachOpts(el,slots.map(s=>({
+      label:s,icon:'clock',disabled:booked.has(s),
+      run:()=>pickSlot(s)
+    })));
+  });
+}
+
+function pickSlot(slot){
+  userMsg(slot);S.slot=slot;
+  agent('confirm',()=>{
+    const sum=`<div class="sum">
+      <div class="sum-h"><svg class="ic"><use href="#i-list-checks"></use></svg> Appointment summary</div>
+      <div class="sum-r"><svg class="ic"><use href="#i-user-round"></use></svg><span class="k">Doctor</span><span class="v">${S.doctor.name}</span></div>
+      <div class="sum-r"><svg class="ic"><use href="#i-stethoscope"></use></svg><span class="k">Speciality</span><span class="v">${S.speciality}</span></div>
+      <div class="sum-r"><svg class="ic"><use href="#i-calendar"></use></svg><span class="k">Date</span><span class="v">${S.dateLabel}</span></div>
+      <div class="sum-r"><svg class="ic"><use href="#i-clock"></use></svg><span class="k">Time</span><span class="v">${S.slot}</span></div>
+    </div>`;
+    const el=botMsg(`Please review your appointment before I confirm it:`,sum);
+    attachOpts(el,[
+      {label:'Confirm',icon:'check',cls:'primary',run:goDetails},
+      {label:'Change slot',icon:'refresh-cw',cls:'ghost',run:()=>{userMsg("Change the slot");goDate();}},
+      {label:'Cancel',icon:'x',cls:'danger',run:cancelBooking},
+    ]);
+  });
+}
+
+function goDetails(){
+  userMsg("Confirm");
+  agent('collect_details',()=>{
+    botMsg(`Almost done! 🎉 Please enter your <b>full name</b> to complete the booking.`);
+    S.subStage='name';setSugg([]);enableTextEntry("Enter your full name…");
+  });
+}
+
+function handleText(text){
+  if(S.stage==='greeting'){goSpeciality();return;}
+  if(S.stage==='collect_details'){
+    if(S.subStage==='name'){
+      S.name=text;userMsg(text);
+      agent('collect_details',()=>{
+        botMsg(`Thanks, <b>${esc(text)}</b>. What's the best <b>phone number</b> for your confirmation?`);
+        S.subStage='phone';enableTextEntry("Enter your phone number…");
+      },600);
+    } else if(S.subStage==='phone'){
+      S.phone=text;userMsg(text);complete();
+    }
+    return;
+  }
+  // off-topic guardrail (matches is_on_topic redirect behavior)
+  userMsg(text);
+  agent(S.stage,()=>{
+    botMsg(`I can only help with clinic appointments here. Let's continue your booking — please choose one of the options above. 💙`);
+  },550);
+}
+
+function complete(){
+  agent('completed',()=>{
+    S.bookingId=genId();
+    const conf=`<div class="conf">
+      <div class="conf-check"><svg class="ic"><use href="#i-check"></use></svg></div>
+      <h4>Appointment confirmed</h4>
+      <div class="sub">A confirmation has been sent to ${esc(S.phone)}</div>
+      <div class="idbox"><div class="l">Booking ID</div><div class="id">${S.bookingId}</div></div>
+      <div class="conf-grid">
+        <div class="cell"><div class="cl">Doctor</div><div class="cv">${S.doctor.name}</div></div>
+        <div class="cell"><div class="cl">Speciality</div><div class="cv">${S.speciality}</div></div>
+        <div class="cell"><div class="cl">Date</div><div class="cv">${S.dateLabel}</div></div>
+        <div class="cell"><div class="cl">Time</div><div class="cv">${S.slot}</div></div>
+        <div class="cell"><div class="cl">Room</div><div class="cv">${S.doctor.room}</div></div>
+        <div class="cell"><div class="cl">Consultation</div><div class="cv">$${S.doctor.fee}</div></div>
+      </div>
+      <div class="conf-btns">
+        <button class="chip primary" onclick="addCal()"><svg class="ic"><use href="#i-calendar-plus"></use></svg> Add to calendar</button>
+        <button class="chip ghost" onclick="start()"><svg class="ic"><use href="#i-plus"></use></svg> New booking</button>
+      </div>
+    </div>`;
+    botMsg(`🎉 You're all set, <b>${esc(S.name)}</b>! Thank you for choosing <b>Clinexa AI</b>.`,conf);
+    setSugg([]);disableInput(true);
+    toast(`Booking ${S.bookingId} confirmed`);
+  },900);
+}
+
+function cancelBooking(){
+  userMsg("Cancel the booking");
+  agent('cancelled',()=>{
+    setStage('cancelled');
+    const el=botMsg(`No problem — your booking was cancelled and nothing was saved. You can start again anytime.`);
+    attachOpts(el,[{label:'Book again',icon:'rotate-cw',cls:'primary',run:start}]);
+    setSugg([]);disableInput(true);
+  },600);
+}
+
+function addCal(){toast("Calendar invite downloaded (.ics)");}
+
+// ── Suggestion chips ─────────────────────────────────────────
+function setSugg(items){
+  sugg.innerHTML='';
+  items.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{input.value=t;submit();};sugg.appendChild(b);});
+}
+
+// ── Input handling ───────────────────────────────────────────
+function disableInput(d){sendBtn.disabled=d;input.disabled=d;if(!d&&!input.value)input.focus();}
+function enableTextEntry(ph){disableInput(false);input.placeholder=ph;input.focus();}
+function submit(){
+  const t=input.value.trim();if(!t||sendBtn.disabled)return;
+  input.value='';input.style.height='auto';input.placeholder="Message Clinexa AI…";
+  handleText(t);
+}
+sendBtn.onclick=submit;
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submit();}});
+input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,120)+'px';});
+
+document.getElementById('newBooking').onclick=()=>{start();closeSidebar();};
+
+// ── Toast ────────────────────────────────────────────────────
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.querySelector('span').textContent=msg;
+  el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);}
+
+// ── Mobile sidebar ───────────────────────────────────────────
+const sb=document.getElementById('sidebar'),bd=document.getElementById('backdrop');
+function closeSidebar(){sb.classList.remove('open');bd.classList.remove('show');}
+document.getElementById('hamb').onclick=()=>{sb.classList.add('open');bd.classList.add('show');};
+bd.onclick=closeSidebar;
+
+// ── Boot ─────────────────────────────────────────────────────
+renderDocs();renderPipe();start();
+</script>
+</body>
+</html>
